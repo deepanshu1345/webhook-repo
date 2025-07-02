@@ -3,33 +3,110 @@
 <head>
   <meta charset="UTF-8">
   <title>GitHub Webhook Viewer</title>
-</head>
-<body>
-  <h2>GitHub Events</h2>
-  <div id="events">Loading...</div>
-  <script>
-    async function fetchEvents() {
-      const res = await fetch('/events');
-      const data = await res.json();
-      const container = document.getElementById('events');
-
-      container.innerHTML = data.map(event => {
-        const date = new Date(event.timestamp).toLocaleString('en-GB', { timeZone: 'UTC' });
-
-        if (event.event_type === 'push') {
-          return `<p>${event.author} pushed to ${event.to_branch} on ${date} UTC</p>`;
-        } else if (event.event_type === 'pull_request') {
-          return `<p>${event.author} submitted a pull request from ${event.from_branch} to ${event.to_branch} on ${date} UTC</p>`;
-        } else if (event.event_type === 'merge_group') {
-          return `<p>${event.author} merged ${event.from_branch} to ${event.to_branch} on ${date} UTC</p>`;
-        } else {
-          return `<p>${event.author} triggered ${event.event_type} event on ${date}</p>`;
-        }
-      }).join('');
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f7fa;
+      margin: 0;
+      padding: 0;
     }
 
-    setInterval(fetchEvents, 15000);
+    header {
+      background-color: #24292f;
+      color: #ffffff;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    #events {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .event-card {
+      background-color: #ffffff;
+      border-left: 5px solid #0366d6;
+      padding: 1rem;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    .event-card p {
+      margin: 0;
+      font-size: 1rem;
+      color: #333333;
+    }
+
+    .event-type {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 0.25rem;
+    }
+
+    .timestamp {
+      font-size: 0.85rem;
+      color: #999;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>GitHub Webhook Events</h2>
+  </header>
+
+  <div id="events">Loading...</div>
+
+  <script>
+    async function fetchEvents() {
+      try {
+        const res = await fetch('/events');
+        const data = await res.json();
+        const container = document.getElementById('events');
+
+        if (!data.length) {
+          container.innerHTML = "<p>No events yet.</p>";
+          return;
+        }
+
+        container.innerHTML = data.map(event => {
+          const date = new Date(event.timestamp).toLocaleString('en-GB', { timeZone: 'UTC' });
+          let message = "";
+
+          if (event.event_type === 'push') {
+            message = `${event.author} pushed to <strong>${event.to_branch}</strong>`;
+          } else if (event.event_type === 'pull_request') {
+            message = `${event.author} submitted a pull request from <strong>${event.from_branch}</strong> to <strong>${event.to_branch}</strong>`;
+          } else if (event.event_type === 'merge_group') {
+            message = `${event.author} merged <strong>${event.from_branch}</strong> into <strong>${event.to_branch}</strong>`;
+          } else {
+            message = `${event.author} triggered <strong>${event.event_type}</strong> event`;
+          }
+
+          return `
+            <div class="event-card">
+              <p>${message}</p>
+              <div class="timestamp">🕒 ${date} UTC</div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error("❌ Failed to load events:", err);
+        document.getElementById('events').innerHTML = "<p style='color:red;'>Failed to load events.</p>";
+      }
+    }
+
     fetchEvents();
+    setInterval(fetchEvents, 15000);
   </script>
 </body>
 </html>
